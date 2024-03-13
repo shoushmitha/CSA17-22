@@ -1,0 +1,88 @@
+import heapq
+
+class PuzzleState:
+    def __init__(self, board, parent=None):
+        self.board = board
+        self.parent = parent
+        self.depth = 0
+        self.score = 0
+
+    def __lt__(self, other):
+        return self.score < other.score
+
+def h(state, goal_state):
+    count = 0
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] != goal_state[i][j]:
+                count += 1
+    return count
+
+def generate_children(parent_state, goal_state):
+    children = []
+    movement = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    for dx, dy in movement:
+        new_board = [row[:] for row in parent_state.board]
+        x, y = get_blank_position(parent_state.board)
+        new_x, new_y = x + dx, y + dy
+        if 0 <= new_x < 3 and 0 <= new_y < 3:
+            new_board[x][y], new_board[new_x][new_y] = new_board[new_x][new_y], new_board[x][y]
+            children.append(PuzzleState(new_board, parent_state))
+    for child in children:
+        child.depth = parent_state.depth + 1
+        child.score = child.depth + h(child.board, goal_state)
+    return children
+
+def get_blank_position(board):
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] == 0:
+                return i, j
+
+def astar(initial_state, goal_state):
+    open_set = []
+    closed_set = set()
+
+    heapq.heappush(open_set, initial_state)
+
+    while open_set:
+        current_state = heapq.heappop(open_set)
+        if current_state.board == goal_state:
+            path = []
+            while current_state:
+                path.append(current_state.board)
+                current_state = current_state.parent
+            return path[::-1]
+        
+        closed_set.add(tuple(map(tuple, current_state.board)))
+
+        children = generate_children(current_state, goal_state)
+
+        for child in children:
+            if tuple(map(tuple, child.board)) not in closed_set:
+                heapq.heappush(open_set, child)
+
+    return None
+
+initial_state = [
+    [1, 2, 3],
+    [4, 0, 6],
+    [7, 5, 8]
+]
+
+goal_state = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 0]
+]
+
+initial_state = PuzzleState(initial_state)
+goal_state = goal_state
+
+solution = astar(initial_state, goal_state)
+
+for step, state in enumerate(solution):
+    print(f"Step {step+1}:")
+    for row in state:
+        print(row)
+    print()
